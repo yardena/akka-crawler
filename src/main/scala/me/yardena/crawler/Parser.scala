@@ -11,7 +11,6 @@ import scala.util.Try
 /**
   * Simple JSoup based parser, that given a response body produces links
   * Receives ExtractLinks(url, body) and responds with LinkExtracted(link) for each link and then sending AllLinksFinished
-  * Since JSoup API is blocking, this actor requires an dedicated thread pool (a.k.a. dispatcher)
   *
   * Created by yardena on 2019-08-22 19:03
   */
