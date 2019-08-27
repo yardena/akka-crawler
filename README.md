@@ -26,23 +26,35 @@ Each of these actors have different dedicated executors (thread pools) that suit
 * it handles different response codes including following redirects (but limiting the number of times request is redirected)
 * it sends response body to the `Parser`, asynchronously receiving back all the links
 * it calculates the ratio of same-domain links to total links
+* if knows the depth of the page, and max depth for crawling, so it sends the extracted links to its parent, the `Crawler`, for further handling if max depth hasn't been exceeded
+* it stores the result using `PageCache`
 
 ### `Fetcher`
 Handles requests asynchronously, returning response bodies.
 
 All requests are pipelined through a flow that consists of the following elements:
-1. Queue
-1. Create request, including appropriate headers
+1. Queue, to buffer requests when http client **backpressures**
+1. Create HTTP request, including appropriate headers
 1. Group of host-based http connection pools (Akka's "super-pool")
-1. Basic classification of the response by *status code* and *content type*
+1. Basic classification of the response by **status code** and **content type**
+1. Extract response body and return it to sender
+The flow tracks sender of each request by using a pass-through context
 
 ### `Parser`
+* Since JSoup is synchronous, `Parser` invokes it asynchronously for each page
+* it filters links to include only http(s) ones
+* it sends them back one-by-one to allow better asynchronous processing of the links
 
 ### `PageCache`
+Using `akka-persistence` module this actor saves messages it receives and can re-play them when re-started.
+In order to be able to do it, the actor needs a unique `persistenceId` - Hashids library is used to generate id from url.
+When page is processed, the result is sent to `PageCache` and persisted to the journal.
+Whenever `PageCache` is created, `akka-persistence` will look for the journal with the id, and send the messages in the journal to the actor allowing it to recover the last state. In the meantime messages to the actor are stashed and the actor will receive them after the state was recovered.
+LevelDB plugin is used for persistence and Kryo is used to serialize/de-serialize the state.
 
 ## Further improvements
 * Tests!!!
-* Better file saving
+* Better file saving (separate from `PageHandler` and streamline)
 * Respect `robots.txt`
 
 
