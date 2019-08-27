@@ -5,7 +5,7 @@ Main class is `CrawlerApp`, allows to invoke the crawler from command line.
 `Crawler` is a singleton, root actor of the application, it is watched by `Terminator` that shuts down JVM when `Crawler` stops.
 
 There are 2 important actors that do the actual work: 
-* `Fetcher` is a singleton asynchronously performing HTTP requests using [Akka Http Client](https://doc.akka.io/docs/akka-http/current/client-side/index.html) and [Akka Reactive Streams](https://doc.akka.io/docs/akka/current/stream/index.html)
+* `Fetcher` is a singleton asynchronously performing HTTP requests using [Akka Http Client](https://doc.akka.io/docs/akka-http/current/client-side/index.html) and [Akka implementation](https://doc.akka.io/docs/akka/current/stream/index.html) of [Reactive Streams](http://www.reactive-streams.org/)
 * `Parser` is a singleton asynchronously extracting links from page HTML using [JSoup](https://jsoup.org/)
 
 Each of these actors have different dedicated [executors](https://doc.akka.io/docs/akka/current/dispatchers.html) (thread pools) that suit the task of the actor, sandbox it, and can be independently tuned.
