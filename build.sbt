@@ -41,5 +41,5 @@ mainClass in assembly := Some("me.yardena.crawler.CrawlerApp")
 
 name := "akka-crawler"
 organization := "me.yardena"
-version := "0.0.1"
+version := "0.0.2"
 

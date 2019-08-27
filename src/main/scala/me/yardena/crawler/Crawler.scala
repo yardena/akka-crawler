@@ -1,6 +1,6 @@
 package me.yardena.crawler
 
-import java.util.concurrent.{TimeUnit, TimeoutException}
+import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Terminated}
 import akka.http.scaladsl.model.Uri
@@ -24,6 +24,7 @@ class Crawler(home: String, maxDepth: Int) extends Actor with ActorLogging with 
   //Creates fetcher and parser, each on dedicated (and appropriately selected for the job) thread pool
   protected val fetcher : ActorRef = context actorOf Props[Fetcher]().withDispatcher("client-dispatcher")
   protected val parser  : ActorRef = context actorOf Props[Parser]().withDispatcher("parser-dispatcher")
+  protected val filer   : ActorRef = context actorOf Props[Filer]().withDispatcher("akka.stream.default-blocking-io-dispatcher")
 
   //all encountered pages and their status
   private var pagesStatus = Map.empty[String,Crawler.PageProcessingStatus]
@@ -59,7 +60,7 @@ class Crawler(home: String, maxDepth: Int) extends Actor with ActorLogging with 
       pagesStatus = pagesStatus + (msg.link -> Crawler.InProgressPage)
       log.info(s"Crawling to ${msg.link}")
 
-      val page = context actorOf Props(new PageHandler(maxDepth, fetcher, parser))
+      val page = context actorOf Props(new PageHandler(maxDepth, fetcher, parser, filer))
       context watch page
       page ! msg
     }
@@ -116,8 +117,8 @@ class Crawler(home: String, maxDepth: Int) extends Actor with ActorLogging with 
 
     case Terminated(_) =>
       val activeActors = context.children.toList.size
-      //no more workers, except fetcher and parser
-      if (activeActors <= 2) {
+      //no more workers, except fetcher, parser and filer
+      if (activeActors <= 3) {
         log.info(s"Finished crawling $home")
         reporter.report()
         context stop self

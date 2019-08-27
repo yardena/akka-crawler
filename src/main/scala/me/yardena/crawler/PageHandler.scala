@@ -1,19 +1,13 @@
 package me.yardena.crawler
 
 import java.time
-import java.io.File
-import java.nio.file.{Files, Path, Paths}
 import java.util.concurrent.TimeoutException
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props, Status}
 import akka.http.scaladsl.model.Uri
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, Source}
-import akka.util.ByteString
 import me.yardena.util.Configurable
-import nl.grons.metrics4.scala.DefaultInstrumented
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 /**
@@ -21,11 +15,11 @@ import scala.concurrent.duration._
   *
   * Created by yardena on 2019-08-22 19:01
   */
-class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef) extends Actor with ActorLogging with Configurable with DefaultInstrumented {
-  import PageHandler.Message._
+class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef, filer: ActorRef) extends Actor with ActorLogging with Configurable {
   import Crawler.Message.{HandleLink, LinkHandled}
   import Fetcher.Message.{Fetch,ResponsePage}
   import Parser.Message.{ExtractLinks,LinkExtracted,AllLinksFinished}
+  import Filer.Message._
 
   implicit val mat = ActorMaterializer()
   import context.dispatcher
@@ -94,8 +88,7 @@ class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef) extends Ac
     case ResponsePage(200, Some(body), _, ts) => //result
       lastRetrieved = ts
       //save page to disk and when succeeded forward the resulting path to self
-      import akka.pattern.pipe
-      Source single body runWith savePage(pageUrl) map PageSaved pipeTo self
+      filer ! SavePage(pageUrl, body)
       //in parallel parse page body for links
       parser ! ExtractLinks(pageUrl, body)
       context become (processing(saved = false, linksDone = false) orElse handleError)
@@ -150,7 +143,7 @@ class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef) extends Ac
 
   private def handleError: Receive = { //partial state machine step
     case Status.Failure(e) =>
-      finish(Some(new RuntimeException(s"Request to $pageUrl failed", e)))
+      finish(Some(new RuntimeException(s"Request to $pageUrl failed: ${e.getMessage}", e)))
 
   }
 
@@ -158,42 +151,6 @@ class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef) extends Ac
     case HandleLink(url, d) =>
       fetcher ! Fetch(url, None)
       context become (fetching orElse handleError)
-  }
-
-  protected def basePath: String = pageConf getString "save-dir" // "./data"
-
-  private def filePath(pageUrl: String): Path = {
-    val uri = Uri(pageUrl)
-    var path = "/" + uri.authority.host.toString.replace('.','_') + uri.path.toString
-    if (!path.endsWith(".html")) {
-      if (!path.contains("/")) {
-        path = path.concat("/")
-      }
-      if (path.endsWith("/")) {
-        path = path.concat("index")
-      }
-      path = path.concat(".html")
-    }
-    val f = new File(basePath.concat(path))
-    f.toPath
-  }
-
-  /**
-    * Saves body of the page and returns the file name
-    * @param pageUrl url of the page
-    * @return
-    */
-  protected def savePage(pageUrl: String): Sink[String, Future[String]] = {
-    metrics.counter("Files").inc(1)
-    val dest = filePath(pageUrl)
-    Files.createDirectories(Paths.get(dest.toString).getParent)
-    //akka magic that saves files
-    // we don't take full advantage of it because we pass a whole String response body in
-    // we could have passed a Source of bytes to make it better
-    Flow[String].map(ByteString(_)).toMat(FileIO.toPath(dest))(Keep.right)
-      .mapMaterializedValue(_.flatMap(res =>
-        Future.fromTry(res.status.map(_ => dest.toString))
-      ))
   }
 
   protected def finish(error: Option[Throwable] = None): Unit = {
@@ -215,9 +172,6 @@ class PageHandler(maxDepth: Int, fetcher: ActorRef, parser: ActorRef) extends Ac
 }
 
 object PageHandler {
-  object Message {
-    case class PageSaved(path: String)
-  }
 
   // -- utility methods for time handling/conversion --
 

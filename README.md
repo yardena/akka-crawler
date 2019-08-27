@@ -4,9 +4,10 @@ Main class is `CrawlerApp`, allows to invoke the crawler from command line.
 
 `Crawler` is a singleton, root actor of the application, it is watched by `Terminator` that shuts down JVM when `Crawler` stops.
 
-There are 2 important actors that do the actual work: 
+There are 3 important actors that do the actual work: 
 * `Fetcher` is a singleton asynchronously performing HTTP requests using [Akka Http Client](https://doc.akka.io/docs/akka-http/current/client-side/index.html) and [Akka implementation](https://doc.akka.io/docs/akka/current/stream/index.html) of [Reactive Streams](http://www.reactive-streams.org/)
 * `Parser` is a singleton asynchronously extracting links from page HTML using [JSoup](https://jsoup.org/)
+* `Filer` creates file path corresponding to the url and saves page to disk, by default into `./data` directory
 
 Each of these actors have different dedicated [executors](https://doc.akka.io/docs/akka/current/dispatchers.html) (thread pools) that suit the task of the actor, sandbox it, and can be independently tuned.
 
@@ -23,7 +24,7 @@ Each of these actors have different dedicated [executors](https://doc.akka.io/do
 * it checks if the link has already been processed in a previous `Crawler` run, with the help of `PageCache` actor, and also validates if the resut is recent or needs to be re-fetched
 * it limits the time for page processing, stoping itself if that time has been exceeded
 * it communicates with `Fetcher` sending the requests and receiving its response
-* it saves the downloaded HTML to a file on the disk, by default into `./data` directory (this may have been extracted into another dedicated actor for better modularity)
+* it saves the downloaded HTML to a file on the disk using `Filer`
 * it handles different response codes including following redirects (but limiting the number of times request is redirected)
 * it sends response body to the `Parser`, asynchronously receiving back all the links
 * it calculates the ratio of same-domain links to total links
@@ -47,6 +48,9 @@ The flow tracks sender of each request by using a pass-through context
 * it filters links to include only http(s) ones
 * it sends them back one-by-one to allow better asynchronous processing of the links
 
+### Filer
+Saves files into configured directory. Since it uses IO, it sits on a dedicated [blocking-io executor](https://doc.akka.io/docs/akka/current/stream/stream-io.html#streaming-file-io).
+
 ### `PageCache`
 Using [`akka-persistence`](https://doc.akka.io/docs/akka/current/persistence.html) module this actor saves messages it receives and can re-play them when re-started.
 In order to be able to do it, the actor needs a unique `persistenceId` - [Hashids library](https://hashids.org/) is used to generate id from url.
@@ -62,7 +66,6 @@ Environment variables can be used to [configure](https://github.com/lightbend/co
 
 ## Further improvements
 * Tests!!!
-* Better file saving (separate from `PageHandler` and streamline)
 * Respect `robots.txt`
 
 
