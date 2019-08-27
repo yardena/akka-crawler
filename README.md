@@ -54,7 +54,7 @@ When page is processed, the result is sent to `PageCache` and persisted to the j
 Whenever `PageCache` is created, `akka-persistence` will look for the journal with the id, and send the messages in the journal to the actor allowing it to recover the last state. In the meantime messages to the actor are stashed and the actor will receive them after the state was recovered.
 
 LevelDB plugin is used for persistence and Kryo plugin is used to serialize/de-serialize the state.
-By default, `journal` and `snapshot` are stored under sub-dirs of current directory.
+By default, `journal` and `snapshot` are stored as sub-dirs of current directory.
 
 ## Infratructure
 Log file is written to current directory, summary of Dropwizard Metrics will be reported in the log when Crawler terminates.
