@@ -34,11 +34,12 @@ Each of these actors have different dedicated executors (thread pools) that suit
 Handles requests asynchronously, returning response bodies.
 
 All requests are pipelined through a flow that consists of the following elements:
-1. Queue, to buffer requests when http client **backpressures**
+1. Queue, to buffer requests when Http Client **backpressures**
 1. Create HTTP request, including appropriate headers
 1. Group of host-based http connection pools (Akka's "super-pool")
 1. Basic classification of the response by **status code** and **content type**
 1. Extract response body and return it to sender
+
 The flow tracks sender of each request by using a pass-through context
 
 ### `Parser`
