@@ -50,6 +50,7 @@ Using `akka-persistence` module this actor saves messages it receives and can re
 In order to be able to do it, the actor needs a unique `persistenceId` - Hashids library is used to generate id from url.
 When page is processed, the result is sent to `PageCache` and persisted to the journal.
 Whenever `PageCache` is created, `akka-persistence` will look for the journal with the id, and send the messages in the journal to the actor allowing it to recover the last state. In the meantime messages to the actor are stashed and the actor will receive them after the state was recovered.
+
 LevelDB plugin is used for persistence and Kryo is used to serialize/de-serialize the state.
 
 ## Further improvements
