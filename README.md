@@ -27,7 +27,7 @@ Each of these actors have different dedicated executors (thread pools) that suit
 * it handles different response codes including following redirects (but limiting the number of times request is redirected)
 * it sends response body to the `Parser`, asynchronously receiving back all the links
 * it calculates the ratio of same-domain links to total links
-* if knows the depth of the page, and max depth for crawling, so it sends the extracted links to its parent, the `Crawler`, for further handling if max depth hasn't been exceeded
+* it knows the depth of the page, and max depth for crawling, so it sends the extracted links to its parent, the `Crawler`, for further handling if max depth hasn't been exceeded
 * it stores the result using `PageCache`
 
 ### `Fetcher`
