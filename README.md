@@ -28,8 +28,21 @@ Each of these actors have different dedicated executors (thread pools) that suit
 * it calculates the ratio of same-domain links to total links
 
 ### `Fetcher`
+Handles requests asynchronously, returning response bodies.
+
+All requests are pipelined through a flow that consists of the following elements:
+1. Queue
+1. Create request, including appropriate headers
+1. Group of host-based http connection pools (Akka's "super-pool")
+1. Basic classification of the response by *status code* and *content type*
 
 ### `Parser`
 
 ### `PageCache`
+
+## Further improvements
+* Tests!!!
+* Better file saving
+* Respect `robots.txt`
+
 
