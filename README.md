@@ -48,7 +48,7 @@ The flow tracks sender of each request by using a pass-through context
 * it filters links to include only http(s) ones
 * it sends them back one-by-one to allow better asynchronous processing of the links
 
-### Filer
+### `Filer`
 Saves files into configured directory. Since it uses IO, it sits on a dedicated [blocking-io executor](https://doc.akka.io/docs/akka/current/stream/stream-io.html#streaming-file-io).
 
 ### `PageCache`
